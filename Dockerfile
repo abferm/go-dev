@@ -47,3 +47,37 @@ ENTRYPOINT ["/with-host-ids"]
 # If you don't tell the container what to do, it just starts a bash shell.
 # (docker-compose.yml overrides this to "sleep infinity" so it stays alive.)
 CMD ["bash"]
+
+# ----------------------------------------------------------------------
+# Build stage — compile a production binary using the dev toolchain.
+# Inherits all Go tools, cached modules, and source from the dev stage.
+# ----------------------------------------------------------------------
+FROM dev AS build
+
+# Copy dependency files first so Docker caches the module download layer
+# unless go.mod actually changes. (go.sum appears only after external deps
+# are added; the * glob lets us copy it when present without failing.)
+COPY go.mod ./
+RUN go mod download 2>/dev/null || true
+
+# Copy the full source tree and build a statically-linked binary.
+# go install places it in $GOPATH/bin (the developer's home dir),
+# which doesn't need any special directory setup.
+COPY . .
+RUN CGO_ENABLED=0 go install .
+
+# ----------------------------------------------------------------------
+# Production stage — minimal runtime image with just the binary.
+# No Go toolchain, no build tools, no development user setup.
+# ----------------------------------------------------------------------
+FROM alpine:latest AS production
+
+# Create a non-root user to run the application
+RUN addgroup -g 1000 app && \
+    adduser -u 1000 -G app -D -h /home/app app
+
+# Copy only the compiled binary from the build stage
+COPY --from=build /home/developer/go/bin/go-dev /app/bin/app
+
+USER app
+ENTRYPOINT ["/app/bin/app"]
