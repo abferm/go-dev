@@ -21,8 +21,14 @@ RUN groupadd -g 1000 developer && \
 # modules. Own it to the developer user so the build-time install works.
 RUN chown -R developer:developer /go
 
-# Pre-install a Go linter so it's ready to use the first time you shell in
+# Pre-install Go tooling — linter, language server, formatter, and debugger.
+# All installed as the developer user so they land in /go/bin and are
+# available immediately without fetching on first use.
 RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.0 && \
+    go install golang.org/x/tools/gopls@latest && \
+    go install golang.org/x/tools/cmd/goimports@latest && \
+    go install golang.org/x/lint/golint@latest && \
+    go install github.com/go-delve/delve/cmd/dlv@latest && \
     golangci-lint --version
 
 # Everything Go writes at runtime (installed tools, module cache) goes
