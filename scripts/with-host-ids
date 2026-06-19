@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 # This script runs every time the container starts. Its job is simple:
 # match the "developer" user's ID numbers inside the container to YOUR

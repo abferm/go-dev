@@ -5,15 +5,15 @@ FROM golang:1.26.0-bookworm AS dev
 WORKDIR /app
 
 RUN apt-get update && \
-    apt-get install -y sudo && \
+    apt-get install -y sudo git && \
     rm -rf /var/lib/apt/lists/*
 # sudo: lets the developer user run commands as root (e.g. apt install)
 
 # Create a user named "developer" with a fixed ID (1000) and a home folder.
 # The with-host-ids script (see below) will change this ID to match your
 # computer's user ID when the container starts, so file ownership lines up.
-RUN groupadd -g 9999 developer && \
-    useradd -r -u 9999 -g 9999 -m -s /bin/bash developer && \
+RUN groupadd -g 1000 developer && \
+    useradd -r -u 1000 -g 1000 -m -s /bin/bash developer && \
     echo "developer ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/developer && \
     chmod 0440 /etc/sudoers.d/developer
 

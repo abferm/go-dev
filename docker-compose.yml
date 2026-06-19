@@ -8,4 +8,5 @@ services:
       IN_CONTAINER: "true"   # Optional: tells scripts they're inside the container
     volumes:
       - .:/app               # Share your project folder with the container
+      - ${HOME}/.gitconfig:/home/developer/.gitconfig:ro  # Your global git config
     command: sleep infinity   # Keep the container running so you can exec into it
