@@ -1,30 +1,38 @@
 # go-dev
 
-A template for container-based Go development that solves the volume permission problem by creating a container user whose UID/GID matches your host user.
+A template for container-based Go development with automatic UID/GID mapping, so bind-mounted files never end up owned by root.
 
 ## How it works
 
-The project directory is bind-mounted into the container at `/app`. Without the developer user setup, files created inside the container (e.g., build artifacts, `go install` binaries) would be owned by `root`, making them unwritable or undeletable from the host.
+The project directory is bind-mounted into the container at `/app`. Without UID/GID matching, files created inside the container (build artifacts, `go install` binaries, etc.) would be owned by root and unwritable from the host.
 
-To avoid this, the container creates a `developer` user with the same UID/GID as your host user, and all processes run as that user. `sudo` is available (passwordless) inside the container when elevated permissions are needed.
+To solve this, the image ships a small [entrypoint script](./entrypoint.sh) that runs at container start:
+
+1. It reads the owning UID/GID of the mounted `/app` directory (which matches your host user).
+2. It adjusts the `developer` user inside the container to match those IDs.
+3. It uses `gosu` to drop privileges and execute the container's `CMD` as `developer`.
+
+No build args, no Makefile, no host-side wrappers needed.
 
 ## File overview
 
 | File | Role |
 |---|---|
-| `Dockerfile` | Builds the dev image: installs `sudo`, creates `developer:<UID:GID>`, sets `USER developer`, installs `golangci-lint`. |
-| `docker-compose.yml` | Defines the `dev` service. Builds with `UID`/`GID` build args, passes them as the container runtime user, mounts `.` to `/app`, and sleeps forever to keep the container alive. |
-| `Makefile` | Convenience wrapper. Automatically exports your host `UID`/`GID` as env vars before calling `docker compose`. Targets: `up` (build + start), `down` (stop), `shell` (open a shell). See `make help`. |
-| `.devcontainer/devcontainer.json` | VS Code Dev Containers config. Points to `docker-compose.yml`, sets the workspace to `/app`, and installs the Go and Docker VS Code extensions. |
+| `with-host-ids` | Startup script: detects host UID/GID from the bind mount, updates the `developer` user, then drops privileges via `gosu`. |
+| `Dockerfile` | Builds the dev image. Installs `sudo` + `gosu`, creates a static `developer` user, installs `golangci-lint`, and sets `entrypoint.sh` as the entrypoint. |
+| `docker-compose.yml` | Defines the `dev` service. Builds without any UID/GID params, mounts `.` to `/app`, and sleeps forever. The entrypoint handles UID/GID mapping automatically. |
+| `.devcontainer/devcontainer.json` | VS Code Dev Containers config. Connects as `developer` (which the entrypoint has already set up with the right UID/GID). |
 
 ## Quick start
 
 ```bash
-make up     # build and start the container
-make shell  # open a shell inside the container
-make down   # stop the container
+docker compose up -d              # build and start the container
+docker compose exec dev bash      # open a shell inside the container
+docker compose down               # stop the container
 ```
 
-For VS Code: open the repo root and run **Dev Containers: Reopen in Container**. The devcontainer config will use the same compose + Dockerfile.
+For VS Code: open the repo root and run **Dev Containers: Reopen in Container**.
 
+## sudo inside the container
 
+The `developer` user has passwordless `sudo` access, so you can install system packages or run commands as root when needed.

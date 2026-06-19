@@ -1,0 +1,13 @@
+#!/bin/bash
+set -ex
+
+HOST_UID=$(stat -c %u /app 2>/dev/null || echo 1000)
+HOST_GID=$(stat -c %g /app 2>/dev/null || echo 1000)
+
+if [ "$HOST_UID" != "$(id -u developer)" ] || [ "$HOST_GID" != "$(id -g developer)" ]; then
+    groupmod -g "$HOST_GID" developer
+    usermod -u "$HOST_UID" -g "$HOST_GID" developer
+    chown "$HOST_UID:$HOST_GID" /home/developer
+fi
+
+exec gosu developer "$@"
