@@ -1,0 +1,12 @@
+{
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "dev",
+    "workspaceFolder": "/app",
+    "extensions": [
+        "golang.Go",
+        "ms-azuretools.vscode-docker",
+    ],
+    "settings": {
+        "go.useLanguageServer": true,
+    }
+}

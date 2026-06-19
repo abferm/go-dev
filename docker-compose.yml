@@ -1,0 +1,15 @@
+services:
+  dev:
+    build:
+      context: .
+      target: dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /app
+    environment:
+      IN_CONTAINER: "true"
+    volumes:
+      - .:/app
+    command: sleep infinity
